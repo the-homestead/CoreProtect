@@ -91,7 +91,16 @@ pipeline {
         stage('Package') {
             steps {
                 echo 'Packaging CoreProtect plugin with dependencies...'
-                bat 'mvn package -DskipTests'
+                script {
+                    // Set the branch property based on the current branch
+                    def branchProperty = env.BRANCH_NAME == 'master' ? 'release' : 
+                                        env.BRANCH_NAME == 'main' ? 'release' : 
+                                        env.BRANCH_NAME == 'develop' ? 'development' : 
+                                        'development'
+                    
+                    echo "Setting project.branch to: ${branchProperty}"
+                    bat "mvn package -DskipTests -Dproject.branch=${branchProperty}"
+                }
                 
                 // Verify the shaded JAR was created
                 script {
@@ -119,7 +128,15 @@ pipeline {
             }
             steps {
                 echo 'Installing CoreProtect to local repository...'
-                bat 'mvn install -DskipTests'
+                script {
+                    // Set the same branch property for consistency
+                    def branchProperty = env.BRANCH_NAME == 'master' ? 'release' : 
+                                        env.BRANCH_NAME == 'main' ? 'release' : 
+                                        env.BRANCH_NAME == 'develop' ? 'development' : 
+                                        'development'
+                    
+                    bat "mvn install -DskipTests -Dproject.branch=${branchProperty}"
+                }
             }
         }
     }
