@@ -49,7 +49,7 @@ public class ConfigHandler extends Queue {
     public static final int EDITION_VERSION = 2;
     public static final String EDITION_BRANCH = VersionUtils.getBranch();
     public static final String EDITION_NAME = VersionUtils.getPluginName();
-    public static final String COMMUNITY_EDITION = "Community Edition";
+    public static final String COMMUNITY_EDITION = "Homestead Edition";
     public static final String JAVA_VERSION = "11.0";
     public static final String MINECRAFT_VERSION = "1.16";
     public static final String PATCH_VERSION = "23.0";
