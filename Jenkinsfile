@@ -42,9 +42,15 @@ pipeline {
                     echo "Building CoreProtect on branch: ${env.BRANCH_NAME}"
                     echo "Build number: ${env.BUILD_NUMBER}"
                     echo "Java version check:"
-                    bat 'java -version'
-                    echo "Maven version check:"
-                    bat 'mvn -version'
+                    if (isUnix()) {
+                        sh 'java -version'
+                        echo "Maven version check:"
+                        sh 'mvn -version'
+                    } else {
+                        bat 'java -version'
+                        echo "Maven version check:"
+                        bat 'mvn -version'
+                    }
                 }
             }
         }
@@ -52,14 +58,26 @@ pipeline {
         stage('Clean') {
             steps {
                 echo 'Cleaning previous CoreProtect builds...'
-                bat 'mvn clean'
+                script {
+                    if (isUnix()) {
+                        sh 'mvn clean'
+                    } else {
+                        bat 'mvn clean'
+                    }
+                }
             }
         }
         
         stage('Compile') {
             steps {
                 echo 'Compiling CoreProtect...'
-                bat 'mvn compile'
+                script {
+                    if (isUnix()) {
+                        sh 'mvn compile'
+                    } else {
+                        bat 'mvn compile'
+                    }
+                }
             }
         }
         
@@ -69,7 +87,11 @@ pipeline {
                 script {
                     try {
                         // CoreProtect has skipTests=true by default, so we override it
-                        bat 'mvn test -DskipTests=false'
+                        if (isUnix()) {
+                            sh 'mvn test -DskipTests=false'
+                        } else {
+                            bat 'mvn test -DskipTests=false'
+                        }
                     } catch (Exception e) {
                         echo 'Tests failed, but continuing build...'
                         currentBuild.result = 'UNSTABLE'
@@ -94,25 +116,38 @@ pipeline {
                 script {
                     // Set the branch property based on the current branch
                     def branchProperty = env.BRANCH_NAME == 'master' ? 'release' : 
-                                        env.BRANCH_NAME == 'main' ? 'release' : 
-                                        env.BRANCH_NAME == 'develop' ? 'development' : 
-                                        'development'
-                    
+                                            env.BRANCH_NAME == 'main' ? 'release' : 
+                                            env.BRANCH_NAME == 'develop' ? 'development' : 
+                                            'development'
                     echo "Setting project.branch to: ${branchProperty}"
-                    bat "mvn package -DskipTests -Dproject.branch=${branchProperty}"
+                    if (isUnix()) {
+                        sh "mvn package -DskipTests -Dproject.branch=${branchProperty}"
+                    } else {
+                        bat "mvn package -DskipTests -Dproject.branch=${branchProperty}"
+                    }
                 }
-                
                 // Verify the shaded JAR was created
                 script {
-                    def jarFiles = bat(script: 'dir target\\CoreProtect-*.jar /b', returnStdout: true).trim()
-                    echo "Generated JAR files: ${jarFiles}"
-                    
-                    // Check if the main JAR exists (not the original)
-                    def mainJar = bat(script: 'dir target\\CoreProtect-*.jar /b | findstr /v original', returnStdout: true).trim()
-                    if (mainJar) {
-                        echo "Final shaded JAR ready: ${mainJar}"
+                    if (isUnix()) {
+                        def jarFiles = sh(script: 'ls target/CoreProtect-*.jar', returnStdout: true).trim()
+                        echo "Generated JAR files: ${jarFiles}"
+                        // Check if the main JAR exists (not the original)
+                        def mainJar = sh(script: "ls target/CoreProtect-*.jar | grep -v original", returnStdout: true).trim()
+                        if (mainJar) {
+                            echo "Final shaded JAR ready: ${mainJar}"
+                        } else {
+                            error "Failed to create shaded JAR file"
+                        }
                     } else {
-                        error "Failed to create shaded JAR file"
+                        def jarFiles = bat(script: 'dir target\\CoreProtect-*.jar /b', returnStdout: true).trim()
+                        echo "Generated JAR files: ${jarFiles}"
+                        // Check if the main JAR exists (not the original)
+                        def mainJar = bat(script: 'dir target\\CoreProtect-*.jar /b | findstr /v original', returnStdout: true).trim()
+                        if (mainJar) {
+                            echo "Final shaded JAR ready: ${mainJar}"
+                        } else {
+                            error "Failed to create shaded JAR file"
+                        }
                     }
                 }
             }
@@ -131,11 +166,14 @@ pipeline {
                 script {
                     // Set the same branch property for consistency
                     def branchProperty = env.BRANCH_NAME == 'master' ? 'release' : 
-                                        env.BRANCH_NAME == 'main' ? 'release' : 
-                                        env.BRANCH_NAME == 'develop' ? 'development' : 
-                                        'development'
-                    
-                    bat "mvn install -DskipTests -Dproject.branch=${branchProperty}"
+                                            env.BRANCH_NAME == 'main' ? 'release' : 
+                                            env.BRANCH_NAME == 'develop' ? 'development' : 
+                                            'development'
+                    if (isUnix()) {
+                        sh "mvn install -DskipTests -Dproject.branch=${branchProperty}"
+                    } else {
+                        bat "mvn install -DskipTests -Dproject.branch=${branchProperty}"
+                    }
                 }
             }
         }
